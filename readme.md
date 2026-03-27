@@ -39,7 +39,7 @@ Simple Django REST service for creating orders with promo codes.
 }
 ```
 
-### Reponse
+### Response
 ```json
 {
   "user_id": 2,
