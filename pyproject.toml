@@ -1,0 +1,6 @@
+[project]
+name = "order-service"
+version = "0.1.0"
+description = "jetlend test assignment"
+readme = "README.md"
+requires-python = ">=3.12"
