@@ -151,3 +151,24 @@ class TestCreateOrder(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["discount"], 0)
 
+    def test_user_not_found(self):
+        """Should return error if user does not exist."""
+        response = self.client.post(self.url, {
+            "user_id": 999,
+            "goods": [{"good_id": self.good.id, "quantity": 1}],
+        }, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_duplicate_goods(self):
+        """Should allow duplicated goods in request."""
+        response = self.client.post(self.url, {
+            "user_id": self.user.id,
+            "goods": [
+                {"good_id": self.good.id, "quantity": 1},
+                {"good_id": self.good.id, "quantity": 2},
+            ],
+        }, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
