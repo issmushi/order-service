@@ -1,6 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 from drf_spectacular.utils import extend_schema
 
@@ -29,7 +30,10 @@ class CreateOrderView(APIView):
 
         validated_data = serializer.validated_data
 
-        user = User.objects.get(id=validated_data["user_id"])
+        try:
+            user = User.objects.get(id=validated_data["user_id"])
+        except User.DoesNotExist:
+            raise ValidationError("User not found")
 
         goods_data = [
             GoodsInput(**item)
