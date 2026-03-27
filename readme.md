@@ -72,7 +72,7 @@ Simple Django REST service for creating orders with promo codes.
 
 
 ```bash
-git clone <repo>
+git clone https://github.com/issmushi/order-service.git
 cd order-service
 
 # create env file
