@@ -81,3 +81,53 @@ class TestCreateOrder(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_invalid_promo(self):
+        """Should return error if promo code is invalid."""
+        response = self.client.post(self.url, {
+            "user_id": self.user.id,
+            "goods": [{"good_id": self.good.id, "quantity": 1}],
+            "promo_code": "INVALID",
+        }, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_expired_promo(self):
+        """Should return error if promo code is expired."""
+        self.promo.expires_at = timezone.now() - timezone.timedelta(days=1)
+        self.promo.save()
+
+        response = self.client.post(self.url, {
+            "user_id": self.user.id,
+            "goods": [{"good_id": self.good.id, "quantity": 1}],
+            "promo_code": "PROMO",
+        }, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_promo_already_used_by_user(self):
+        """Should return error if user already used this promo."""
+        PromoUsage.objects.create(user=self.user, promo_code=self.promo)
+
+        response = self.client.post(self.url, {
+            "user_id": self.user.id,
+            "goods": [{"good_id": self.good.id, "quantity": 1}],
+            "promo_code": "PROMO",
+        }, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_promo_usage_limit_reached(self):
+        """Should return error if promo usage limit reached."""
+        other_user = User.objects.create(username="other")
+        PromoUsage.objects.create(user=other_user, promo_code=self.promo)
+
+        response = self.client.post(self.url, {
+            "user_id": self.user.id,
+            "goods": [{"good_id": self.good.id, "quantity": 1}],
+            "promo_code": "PROMO",
+        }, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+
