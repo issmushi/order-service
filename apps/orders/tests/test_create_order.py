@@ -129,5 +129,25 @@ class TestCreateOrder(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_category_restriction(self):
+        """Promo should not apply to goods from other categories."""
+        response = self.client.post(self.url, {
+            "user_id": self.user.id,
+            "goods": [{"good_id": self.other_category_good.id, "quantity": 1}],
+            "promo_code": "PROMO",
+        }, format="json")
 
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["discount"], 0)
+
+    def test_excluded_goods(self):
+        """Promo should not apply to excluded goods."""
+        response = self.client.post(self.url, {
+            "user_id": self.user.id,
+            "goods": [{"good_id": self.excluded_good.id, "quantity": 1}],
+            "promo_code": "PROMO",
+        }, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["discount"], 0)
 
