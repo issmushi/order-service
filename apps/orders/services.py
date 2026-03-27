@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from decimal import Decimal
 
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 
@@ -41,29 +41,41 @@ def create_order(
     Returns:
         dict: Order data with totals and discounts
     """
-    goods_ids = [item.good_id for item in goods_data]
+    if not goods_data:
+        raise ValidationError("Goods list cannot be empty")
 
-    goods_qs = Goods.objects.select_related("category").filter(id__in=goods_ids)
+    goods_ids = [item.good_id for item in goods_data]
+    unique_goods_ids = set(goods_ids)
+
+    goods_qs = Goods.objects.select_related("category").filter(id__in=unique_goods_ids)
     goods_map = {g.id: g for g in goods_qs}
 
-    if len(goods_map) != len(goods_ids):
+    if len(goods_map) != len(unique_goods_ids):
         raise ValidationError("Some goods not found")
 
     promo: PromoCode | None = None
 
     if promo_code_str:
         try:
-            promo = PromoCode.objects.prefetch_related("categories").get(code=promo_code_str)
+            promo = (
+                PromoCode.objects
+                .select_for_update()
+                .prefetch_related("categories")
+                .get(code=promo_code_str)
+            )
         except PromoCode.DoesNotExist:
             raise ValidationError("Invalid promo code")
 
         if promo.expires_at < timezone.now():
             raise ValidationError("Promo code expired")
 
-        if PromoUsage.objects.filter(user=user, promo_code=promo).exists():
+        usages_qs = PromoUsage.objects.select_for_update().filter(promo_code=promo)
+        usages_count = usages_qs.count()
+
+        if usages_qs.filter(user=user).exists():
             raise ValidationError("Promo already used by user")
 
-        if promo.usages.count() >= promo.max_usages:
+        if usages_count >= promo.max_usages:
             raise ValidationError("Promo usage limit reached")
 
     order = Order.objects.create(
@@ -118,15 +130,17 @@ def create_order(
 
     has_discount = discountable_total > 0
 
-    if promo:
-        if has_discount:
-            discountable_total *= (
-                Decimal("1") - promo.discount_percent / Decimal("100")
+    if promo and has_discount:
+        try:
+            PromoUsage.objects.create(
+                user=user,
+                promo_code=promo,
             )
+        except IntegrityError:
+            raise ValidationError("Promo already used by user")
 
-        PromoUsage.objects.create(
-            user=user,
-            promo_code=promo,
+        discountable_total *= (
+            Decimal("1") - promo.discount_percent / Decimal("100")
         )
 
     total = discountable_total + non_discountable_total
