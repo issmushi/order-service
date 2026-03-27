@@ -83,12 +83,11 @@ docker-compose up -d
 
 # local run
 poetry install
-poetry shell
 
-python manage.py migrate
-python manage.py runserver
+poetry run python manage.py migrate
+poetry run python manage.py runserver
 
 # run tests
-python manage.py test
+poetry run python manage.py test apps.orders.tests.test_create_order    
 ```
 ---
