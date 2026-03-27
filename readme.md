@@ -17,7 +17,7 @@ Simple Django REST service for creating orders with promo codes.
 ## Tech Stack
 
 - Python 3.12  
-- Django  
+- Django 4.2
 - Django REST Framework  
 - drf-spectacular  
 - PostgreSQL 
