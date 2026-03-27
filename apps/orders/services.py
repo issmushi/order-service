@@ -116,10 +116,13 @@ def create_order(
             "total": item_total_after_discount,
         })
 
+    has_discount = discountable_total > 0
+
     if promo:
-        discountable_total *= (
-            Decimal("1") - promo.discount_percent / Decimal("100")
-        )
+        if has_discount:
+            discountable_total *= (
+                Decimal("1") - promo.discount_percent / Decimal("100")
+            )
 
         PromoUsage.objects.create(
             user=user,
@@ -127,7 +130,12 @@ def create_order(
         )
 
     total = discountable_total + non_discountable_total
-    discount = promo.discount_percent / Decimal("100") if promo else Decimal("0")
+
+    discount = (
+        promo.discount_percent / Decimal("100")
+        if promo and has_discount
+        else Decimal("0")
+    )
 
     return {
         "user_id": user.id,
